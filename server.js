@@ -112,7 +112,7 @@ app.post("/login", jsonParser, function (req, res, next) {
   );
 });
 
-app.post("/authen", jsonParser, function (req, res, next) {
+/* app.post("/authen", jsonParser, function (req, res, next) {
   try {
     const token = req.headers.authorization.split(" ")[1];
     var decoded = jwt.verify(token, secret);
@@ -120,7 +120,7 @@ app.post("/authen", jsonParser, function (req, res, next) {
   } catch (err) {
     res.json({ status: "error", message: err.message });
   }
-});
+}); */
 
 app.post('/check-username', (req, res) => {
   const { username } = req.body;
@@ -177,7 +177,7 @@ app.get("/hw-asset", (req, res) => {
 app.post("/addhw-asset", (req, res) => {
   const requiredFields = [
     'assetnum', 'brand', 'model', 'user', 'location', 'spec',
-    'sn', 'software', 'price', 'receivedate', 'invoicenum', 'ponum'
+    'serialnumber', 'software', 'price', 'receivedate', 'invoicenum', 'ponum'
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -190,7 +190,7 @@ app.post("/addhw-asset", (req, res) => {
     }
   }
   const sql =
-    "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `sn`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   const values = [
     req.body.assetnum,
     req.body.brand,
@@ -198,7 +198,7 @@ app.post("/addhw-asset", (req, res) => {
     req.body.user,
     req.body.location,
     req.body.spec,
-    req.body.sn,
+    req.body.serialnumber,
     req.body.software,
     req.body.price,
     req.body.receivedate,
@@ -224,7 +224,7 @@ app.get("/readhw-asset/:id", (req, res) => {
 app.put("/updatehw-asset/:id", (req, res) => {
   const requiredFields = [
     'assetnum', 'brand', 'model', 'user', 'location', 'spec',
-    'sn', 'software', 'price', 'receivedate', 'invoicenum', 'ponum'
+    'serialnumber', 'software', 'price', 'receivedate', 'invoicenum', 'ponum'
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -237,7 +237,7 @@ app.put("/updatehw-asset/:id", (req, res) => {
     }
   }
   const sql =
-    "UPDATE hw_asset SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `spec`=?, `sn`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
+    "UPDATE hw_asset SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `spec`=?, `serialnumber`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
   const id = req.params.id;
   db.query(
     sql,
@@ -248,7 +248,7 @@ app.put("/updatehw-asset/:id", (req, res) => {
       req.body.user,
       req.body.location,
       req.body.spec,
-      req.body.sn,
+      req.body.serialnumber,
       req.body.software,
       req.body.price,
       req.body.receivedate,
@@ -285,7 +285,7 @@ app.get("/hw-accessories", (req, res) => {
 
 app.post("/addhw-accessories", (req, res) => {
   const requiredFields = [
-    `type`, `detail`, `sn`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
+    `type`, `detail`, `serialnumber`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -298,11 +298,11 @@ app.post("/addhw-accessories", (req, res) => {
     }
   }
   const sql =
-    "INSERT INTO hw_accessories (`type`, `detail`, `sn`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO hw_accessories (`type`, `detail`, `serialnumber`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
   const values = [
     req.body.type,
     req.body.detail,
-    req.body.sn,
+    req.body.serialnumber,
     req.body.assetinstall,
     req.body.location,
     req.body.price,
@@ -328,7 +328,7 @@ app.get("/readhw-accessories/:id", (req, res) => {
 
 app.put("/updatehw-accessories/:id", (req, res) => {
   const requiredFields = [
-    `type`, `detail`, `sn`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
+    `type`, `detail`, `serialnumber`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -341,14 +341,14 @@ app.put("/updatehw-accessories/:id", (req, res) => {
     }
   }
   const sql =
-    "UPDATE hw_accessories SET `type`=?, `detail`=?, `sn`=?, `assetinstall`=?, `location`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
+    "UPDATE hw_accessories SET `type`=?, `detail`=?, `serialnumber`=?, `assetinstall`=?, `location`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
   const id = req.params.id;
   db.query(
     sql,
     [
         req.body.type,
         req.body.detail,
-        req.body.sn,
+        req.body.serialnumber,
         req.body.assetinstall,
         req.body.location,
         req.body.price,
@@ -386,7 +386,7 @@ app.get("/sw-asset", (req, res) => {
   
   app.post("/addsw-asset", (req, res) => {
     const requiredFields = [
-      `assetnum`, `name`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
+      `assetnum`, `name`,`serialnumber`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
     ];
     for (const field of requiredFields) {
       if (req.body[field] === undefined || req.body[field] === null) {
@@ -399,10 +399,11 @@ app.get("/sw-asset", (req, res) => {
       }
     }
     const sql =
-      "INSERT INTO sw_asset (`assetnum`, `name`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      "INSERT INTO sw_asset (`assetnum`, `name`, `serialnumber`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     const values = [
       req.body.assetnum,
       req.body.name,
+      req.body.serialnumber,
       req.body.swkey,
       req.body.user,
       req.body.assetinstall,
@@ -430,7 +431,7 @@ app.get("/sw-asset", (req, res) => {
   
   app.put("/updatesw-asset/:id", (req, res) => {
     const requiredFields = [
-      `assetnum`, `name`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
+      `assetnum`, `name`, `serialnumber`, `swkey`, `user`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`
     ];
     for (const field of requiredFields) {
       if (req.body[field] === undefined || req.body[field] === null) {
@@ -443,13 +444,14 @@ app.get("/sw-asset", (req, res) => {
       }
     }
     const sql =
-      "UPDATE sw_asset SET `assetnum`=?, `name`=?, `swkey`=?, `user`=?, `assetinstall`=?, `location`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
+      "UPDATE sw_asset SET `assetnum`=?, `name`=?,`serialnumber`=?, `swkey`=?, `user`=?, `assetinstall`=?, `location`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
     const id = req.params.id;
     db.query(
       sql,
       [
         req.body.assetnum,
         req.body.name,
+        req.body.serialnumber,
         req.body.swkey,
         req.body.user,
         req.body.assetinstall,
@@ -578,7 +580,7 @@ app.get("/sw-yearly", (req, res) => {
 //API for Amortized
 //Move
 app.post("/movetohw-amortized/:id", (req, res) => {
-  const sql = "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `sn`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) SELECT assetnum, brand, model, user, location, spec, sn, software, price, receivedate, invoicenum, ponum, CURRENT_TIMESTAMP() FROM hw_asset WHERE id = ?";
+  const sql = "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) SELECT assetnum, brand, model, user, location, spec, sn, software, price, receivedate, invoicenum, ponum, CURRENT_TIMESTAMP() FROM hw_asset WHERE id = ?";
   const sqldel = "DELETE FROM hw_asset WHERE id = ?";
   const id = req.params.id;
   db.query(sql, [id], (err, result) => {
@@ -600,7 +602,7 @@ app.get("/hw-amortized", (req, res) => {
 
 app.post("/addhw-amortized", (req, res) => {
   const requiredFields = [
-    `assetnum`, `brand`, `model`, `user`, `location`, `spec`, `sn`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`
+    `assetnum`, `brand`, `model`, `user`, `location`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -613,7 +615,7 @@ app.post("/addhw-amortized", (req, res) => {
     }
   }
   const sql =
-    "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `sn`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   const values = [
     req.body.assetnum,
     req.body.brand,
@@ -621,7 +623,7 @@ app.post("/addhw-amortized", (req, res) => {
     req.body.user,
     req.body.location,
     req.body.spec,
-    req.body.sn,
+    req.body.serialnumber,
     req.body.software,
     req.body.price,
     req.body.receivedate,
@@ -647,7 +649,7 @@ app.get("/readhw-amortized/:id", (req, res) => {
 
 app.put("/updatehw-amortized/:id", (req, res) => {
   const requiredFields = [
-    `assetnum`, `brand`, `model`, `user`, `location`, `spec`, `sn`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`
+    `assetnum`, `brand`, `model`, `user`, `location`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`
   ];
   for (const field of requiredFields) {
     if (req.body[field] === undefined || req.body[field] === null) {
@@ -660,7 +662,7 @@ app.put("/updatehw-amortized/:id", (req, res) => {
     }
   }
   const sql =
-    "UPDATE hw_amortized SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `spec`=?, `sn`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=?, `amortizeddate`=? WHERE id=?";
+    "UPDATE hw_amortized SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `spec`=?, `serialnumber`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=?, `amortizeddate`=? WHERE id=?";
   const id = req.params.id;
   db.query(
     sql,
@@ -671,7 +673,7 @@ app.put("/updatehw-amortized/:id", (req, res) => {
       req.body.user,
       req.body.location,
       req.body.spec,
-      req.body.sn,
+      req.body.serialnumber,
       req.body.software,
       req.body.price,
       req.body.receivedate,
