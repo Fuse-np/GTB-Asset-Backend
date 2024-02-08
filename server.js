@@ -69,61 +69,50 @@ app.post("/adduser", jsonParser, function (req, res, next) {
   const maxPasswordLength = 30;
   const minFullNameLength = 1;
   const maxFullNameLength = 50;
+  const { username, password, fullname, role } = req.body;
 
-  if (
-    !req.body.username ||
-    req.body.username.length < minUsernameLength ||
-    req.body.username.length > maxUsernameLength
-  ) {
+  if (!username || username.length < minUsernameLength || username.length > maxUsernameLength) {
     return res.json({
       status: "error",
       message: `Username must be between ${minUsernameLength} and ${maxUsernameLength} characters.`,
     });
   }
-  if (
-    !req.body.password ||
-    req.body.password.length < minPasswordLength ||
-    req.body.password.length > maxPasswordLength
-  ) {
+  if (!password || password.length < minPasswordLength || password.length > maxPasswordLength) {
     return res.json({
       status: "error",
       message: `Password must be between ${minPasswordLength} and ${maxPasswordLength} characters.`,
     });
   }
-  if (
-    !req.body.fullname ||
-    req.body.fullname.length < minFullNameLength ||
-    req.body.fullname.length > maxFullNameLength
-  ) {
+  if (!fullname || fullname.length < minFullNameLength || fullname.length > maxFullNameLength) {
     return res.json({
       status: "error",
       message: `Fullname must be between ${minFullNameLength} and ${maxFullNameLength} characters.`,
     });
   }
-
   const validRoles = ["Admin", "User"];
-  if (!req.body.role || !validRoles.includes(req.body.role)) {
+  if (!role || !validRoles.includes(role)) {
     return res.json({
       status: "error",
       message: `Invalid role. Valid roles are: ${validRoles.join(", ")}`,
     });
   }
-    bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
-      if (err) {
-        return res.json({ status: "error", message: err });
-      }
-      db.query(
-        "INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)",
-        [req.body.fullname, req.body.username, hash, req.body.role],
-        function (err, results, fields) {
-          if (err) {
-            return res.json({ status: "error", message: err });
-          }
-          return res.json({ status: "ok" });
+  bcrypt.hash(password, saltRounds, function (err, hash) {
+    if (err) {
+      return res.json({ status: "error", message: err });
+    }
+
+    db.query(
+      "INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)",
+      [fullname, username, hash, role],
+      function (err, results, fields) {
+        if (err) {
+          return res.json({ status: "error", message: err });
         }
-      );
-    });
+        return res.json({ status: "ok" });
+      }
+    );
   });
+});
 
 
 /* app.post("/authen", jsonParser, function (req, res, next) {
