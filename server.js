@@ -71,19 +71,31 @@ app.post("/adduser", jsonParser, function (req, res, next) {
   const maxFullNameLength = 50;
   const { username, password, fullname, role } = req.body;
 
-  if (!username || username.length < minUsernameLength || username.length > maxUsernameLength) {
+  if (
+    !username ||
+    username.length < minUsernameLength ||
+    username.length > maxUsernameLength
+  ) {
     return res.json({
       status: "error",
       message: `Username must be between ${minUsernameLength} and ${maxUsernameLength} characters.`,
     });
   }
-  if (!password || password.length < minPasswordLength || password.length > maxPasswordLength) {
+  if (
+    !password ||
+    password.length < minPasswordLength ||
+    password.length > maxPasswordLength
+  ) {
     return res.json({
       status: "error",
       message: `Password must be between ${minPasswordLength} and ${maxPasswordLength} characters.`,
     });
   }
-  if (!fullname || fullname.length < minFullNameLength || fullname.length > maxFullNameLength) {
+  if (
+    !fullname ||
+    fullname.length < minFullNameLength ||
+    fullname.length > maxFullNameLength
+  ) {
     return res.json({
       status: "error",
       message: `Fullname must be between ${minFullNameLength} and ${maxFullNameLength} characters.`,
@@ -113,7 +125,6 @@ app.post("/adduser", jsonParser, function (req, res, next) {
     );
   });
 });
-
 
 /* app.post("/authen", jsonParser, function (req, res, next) {
   try {
@@ -215,10 +226,10 @@ app.post("/addhw-asset", (req, res) => {
       return res.status(400).json({ Message: `${field} cannot be null.` });
     }
   }
-  const sqlCheckDuplicate =
+  const sqlCheckDuplicateAsset =
     "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = ?";
   const assetnum = req.body.assetnum;
-  db.query(sqlCheckDuplicate, assetnum, (err, result) => {
+  db.query(sqlCheckDuplicateAsset, assetnum, (err, result) => {
     if (err) return res.status(500).json(err);
     const count = result[0].count;
     if (count > 0) {
@@ -227,26 +238,73 @@ app.post("/addhw-asset", (req, res) => {
         message: "Asset Number already exists.",
       });
     } else {
-      const sql =
-        "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      const values = [
-        req.body.assetnum,
-        req.body.brand,
-        req.body.model,
-        req.body.user,
-        req.body.location,
-        req.body.dev,
-        req.body.spec,
-        req.body.serialnumber,
-        req.body.software,
-        req.body.price,
-        req.body.receivedate,
-        req.body.invoicenum,
-        req.body.ponum,
-      ];
-      db.query(sql, values, (err, result) => {
+      const sqlCheckDuplicateAmortized =
+        "SELECT COUNT(*) AS count FROM hw_amortized WHERE assetnum = ?";
+      db.query(sqlCheckDuplicateAmortized, assetnum, (err, result) => {
         if (err) return res.status(500).json(err);
-        return res.status(201).json({ Message: "Asset added successfully." });
+        const countAmortized = result[0].count;
+        if (countAmortized > 0) {
+          return res.json({
+            status: "erroramortized",
+            message: "Asset Number already exists in amortized assets.",
+          });
+        } else {
+          let software;
+          if (Array.isArray(req.body.software)) {
+            software = req.body.software.join(", ");
+          } else {
+            software = req.body.software;
+          }
+          ("SELECT assetnum, software FROM hw_asset"); 
+          const sqlCheckDuplicateSoftware =
+          "SELECT assetnum, software FROM hw_asset"; 
+          db.query(sqlCheckDuplicateSoftware, (err, result) => {
+            if (err) return res.status(500).json(err);
+            const existingSoftwareEntries = result;
+            const newSoftware = Array.isArray(req.body.software)
+              ? req.body.software
+              : [req.body.software];
+            const duplicateAssets = [];
+            for (const softwareEntry of newSoftware) {
+              const existingAsset = existingSoftwareEntries.find(
+                (entry) => entry.software === softwareEntry
+              );
+              if (existingAsset) {
+                duplicateAssets.push(existingAsset.assetnum); 
+              }
+            }
+            if (duplicateAssets.length > 0) {
+              return res.json({
+                status: "errorsoftware",
+                message: `${req.body.software} already exists in another asset.`,
+                duplicateAssets: duplicateAssets,
+              });
+            }
+            const sql =
+              "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            const values = [
+              req.body.assetnum,
+              req.body.brand,
+              req.body.model,
+              req.body.user,
+              req.body.location,
+              req.body.dev,
+              req.body.spec,
+              req.body.serialnumber,
+              software,
+              req.body.price,
+              req.body.receivedate,
+              req.body.invoicenum,
+              req.body.ponum,
+            ];
+            db.query(sql, values, (err, result) => {
+              if (err) return res.status(500).json(err);
+              return res
+                .status(201)
+                .json({ Message: "Asset added successfully." });
+            });
+          });
+        }
       });
     }
   });
@@ -289,9 +347,10 @@ app.put("/updatehw-asset/:id", (req, res) => {
     }
   }
   const sqlCheckDuplicate =
-    "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = ?";
+    "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = ? AND id != ?";
   const assetnum = req.body.assetnum;
-  db.query(sqlCheckDuplicate, assetnum, (err, result) => {
+  const id = req.params.id;
+  db.query(sqlCheckDuplicate, [assetnum, id], (err, result) => {
     if (err) return res.status(500).json(err);
     const count = result[0].count;
     if (count > 0) {
@@ -302,7 +361,6 @@ app.put("/updatehw-asset/:id", (req, res) => {
     } else {
       const sql =
         "UPDATE hw_asset SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `dev`=?, `spec`=?, `serialnumber`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
-      const id = req.params.id;
       db.query(
         sql,
         [
@@ -330,7 +388,6 @@ app.put("/updatehw-asset/:id", (req, res) => {
     }
   });
 });
-
 app.delete("/deletehw-asset/:id", (req, res) => {
   const sql = "DELETE FROM hw_asset WHERE id = ?";
   const id = req.params.id;
@@ -762,10 +819,10 @@ app.post("/addhw-amortized", (req, res) => {
       return res.status(400).json({ Message: `${field} cannot be null.` });
     }
   }
-  const sqlCheckDuplicate =
+  const sqlCheckDuplicateAmortized =
     "SELECT COUNT(*) AS count FROM hw_amortized WHERE assetnum = ?";
   const assetnum = req.body.assetnum;
-  db.query(sqlCheckDuplicate, assetnum, (err, result) => {
+  db.query(sqlCheckDuplicateAmortized, assetnum, (err, result) => {
     if (err) return res.status(500).json(err);
     const count = result[0].count;
     if (count > 0) {
@@ -774,27 +831,43 @@ app.post("/addhw-amortized", (req, res) => {
         message: "Asset Number already exists.",
       });
     } else {
-      const sql =
-        "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      const values = [
-        req.body.assetnum,
-        req.body.brand,
-        req.body.model,
-        req.body.user,
-        req.body.location,
-        req.body.dev,
-        req.body.spec,
-        req.body.serialnumber,
-        req.body.software,
-        req.body.price,
-        req.body.receivedate,
-        req.body.invoicenum,
-        req.body.ponum,
-        req.body.amortizeddate,
-      ];
-      db.query(sql, values, (err, result) => {
-        if (err) return res.json(err);
-        return res.json(result);
+      const sqlCheckDuplicateAsset =
+        "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = ?";
+      db.query(sqlCheckDuplicateAsset, assetnum, (err, result) => {
+        if (err) return res.status(500).json(err);
+        const countAsset = result[0].count;
+        if (countAsset > 0) {
+          return res.json({
+            status: "errorhardware",
+            message: "Asset Number already exists in Hardware assets.",
+          });
+        } else {
+          const sql =
+            "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          const values = [
+            req.body.assetnum,
+            req.body.brand,
+            req.body.model,
+            req.body.user,
+            req.body.location,
+            req.body.dev,
+            req.body.spec,
+            req.body.serialnumber,
+            req.body.software,
+            req.body.price,
+            req.body.receivedate,
+            req.body.invoicenum,
+            req.body.ponum,
+            req.body.amortizeddate,
+          ];
+          db.query(sql, values, (err, result) => {
+            if (err) {
+              console.error("Error inserting data:", err);
+              return res.status(500).json({ message: "Internal Server Error" });
+            }
+            return res.json(result);
+          });
+        }
       });
     }
   });
@@ -967,9 +1040,10 @@ app.get("/swyeartotalprice", (req, res) => {
   });
 });
 
-//Move 
+//Move
 app.post("/movetohw-amortized/:id", (req, res) => {
-  const checkSql = "SELECT COUNT(*) AS count FROM hw_amortized WHERE assetnum = (SELECT assetnum FROM hw_asset WHERE id = ?)";
+  const checkSql =
+    "SELECT COUNT(*) AS count FROM hw_amortized WHERE assetnum = (SELECT assetnum FROM hw_asset WHERE id = ?)";
   const sql =
     "INSERT INTO hw_amortized (`assetnum`, `brand`, `model`, `user`, `location`, `dev`,`spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`, `amortizeddate`) SELECT assetnum, brand, model, user, location, dev, spec, serialnumber, software, price, receivedate, invoicenum, ponum, DATE(CURRENT_TIMESTAMP()) FROM hw_asset WHERE id = ?";
   const sqldel = "DELETE FROM hw_asset WHERE id = ?";
@@ -995,7 +1069,8 @@ app.post("/movetohw-amortized/:id", (req, res) => {
 });
 
 app.post("/moveback-hwasset/:id", (req, res) => {
-  const checkSql = "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = (SELECT assetnum FROM hw_amortized WHERE id = ?)";
+  const checkSql =
+    "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = (SELECT assetnum FROM hw_amortized WHERE id = ?)";
   const sql =
     "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `dev`,`spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) SELECT assetnum, brand, model, user, location, dev, spec, serialnumber, software, price, receivedate, invoicenum, ponum FROM hw_amortized WHERE id = ?";
   const sqldel = "DELETE FROM hw_amortized WHERE id = ?";
@@ -1020,6 +1095,27 @@ app.post("/moveback-hwasset/:id", (req, res) => {
     }
   });
 });
+
+//Get software
+/* app.get("/selectsw-asset", (req, res) => {
+  const sql = `SELECT * FROM sw_asset WHERE assetnum NOT IN (
+    SELECT DISTINCT SUBSTRING_INDEX(SUBSTRING_INDEX(hw_asset.software, ', ', numbers.n), ', ', -1) AS software
+    FROM hw_asset
+    INNER JOIN (
+        SELECT 1 + a.N + b.N * 10 AS n
+        FROM 
+        (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS a
+        CROSS JOIN 
+        (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS b
+    ) numbers
+    ON CHAR_LENGTH(hw_asset.software)
+    -CHAR_LENGTH(REPLACE(hw_asset.software, ', ', ''))>=numbers.n-1
+  )`;
+  db.query(sql, (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
+  });
+}); */
 
 app.listen(process.env.PORT, () => {
   console.log("running");
