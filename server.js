@@ -40,10 +40,14 @@ app.post("/login", jsonParser, function (req, res, next) {
         users[0].password,
         function (err, isLogin) {
           if (isLogin) {
-            var token = jwt.sign({ username: users[0].username }, secret, {
+            var tokenPayload = {
+              username: users[0].username,
+              role: users[0].role 
+            };
+            var token = jwt.sign(tokenPayload, secret, {
               expiresIn: "5h",
             });
-            res.json({ status: "ok", message: "Login success", token });
+            res.json({ status: "ok", message: "Login success", token, role: users[0].role });
           } else {
             res.json({ status: "error", message: "Login failed" });
           }
@@ -126,16 +130,6 @@ app.post("/adduser", jsonParser, function (req, res, next) {
   });
 });
 
-/* app.post("/authen", jsonParser, function (req, res, next) {
-  try {
-    const token = req.headers.authorization.split(" ")[1];
-    var decoded = jwt.verify(token, secret);
-    res.json({ status: "ok", decoded });
-  } catch (err) {
-    res.json({ status: "error", message: err.message });
-  }
-}); */
-
 app.post("/check-username", (req, res) => {
   const { username } = req.body;
   db.query(
@@ -210,7 +204,6 @@ app.post("/addhw-asset", (req, res) => {
     "dev",
     "spec",
     "serialnumber",
-    "software",
     "price",
     "receivedate",
     "invoicenum",
@@ -273,13 +266,13 @@ app.post("/addhw-asset", (req, res) => {
                 duplicateAssets.push(existingAsset.assetnum); 
               }
             }
-            if (duplicateAssets.length > 0) {
+            if (duplicateAssets.length > 0 && duplicateAssets.length !== 0) {
               return res.json({
-                status: "errorsoftware",
-                message: `${req.body.software} already exists in another asset.`,
-                duplicateAssets: duplicateAssets,
+                  status: "errorsoftware",
+                  message: `${req.body.software} already exists in another asset.`,
+                  duplicateAssets: duplicateAssets,
               });
-            }
+          }
             const sql =
               "INSERT INTO hw_asset (`assetnum`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `software`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             const values = [
@@ -330,7 +323,6 @@ app.put("/updatehw-asset/:id", (req, res) => {
     "dev",
     "spec",
     "serialnumber",
-    "software",
     "price",
     "receivedate",
     "invoicenum",
@@ -348,6 +340,8 @@ app.put("/updatehw-asset/:id", (req, res) => {
   }
   const sqlCheckDuplicate =
     "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = ? AND id != ?";
+  const sqlCheckDuplicateAmortized =
+    "SELECT COUNT(*) AS count FROM hw_amortized WHERE assetnum = ?";
   const assetnum = req.body.assetnum;
   const id = req.params.id;
   db.query(sqlCheckDuplicate, [assetnum, id], (err, result) => {
@@ -358,36 +352,79 @@ app.put("/updatehw-asset/:id", (req, res) => {
         status: "error",
         message: "Asset Number already exists.",
       });
-    } else {
-      const sql =
-        "UPDATE hw_asset SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `dev`=?, `spec`=?, `serialnumber`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
-      db.query(
-        sql,
-        [
-          req.body.assetnum,
-          req.body.brand,
-          req.body.model,
-          req.body.user,
-          req.body.location,
-          req.body.dev,
-          req.body.spec,
-          req.body.serialnumber,
-          req.body.software,
-          req.body.price,
-          req.body.receivedate,
-          req.body.invoicenum,
-          req.body.ponum,
-          id,
-        ],
-        (err, result) => {
-          if (err)
-            return res.status(500).json({ Message: "Error inside server" });
-          return res.json(result);
-        }
-      );
     }
+    db.query(sqlCheckDuplicateAmortized, assetnum, (err, result) => {
+      if (err) return res.status(500).json(err);
+      const countAmortized = result[0].count;
+      if (countAmortized > 0) {
+        return res.json({
+          status: "erroramortized",
+          message: "Asset Number already exists in amortized assets.",
+        });
+      } else {
+        let software;
+          if (Array.isArray(req.body.software)) {
+            software = req.body.software.join(", ");
+          } else {
+            software = req.body.software;
+          }
+          ("SELECT assetnum, software FROM hw_asset"); 
+          const sqlCheckDuplicateSoftware =
+          "SELECT assetnum, software FROM hw_asset"; 
+          db.query(sqlCheckDuplicateSoftware, (err, result) => {
+            if (err) return res.status(500).json(err);
+            const existingSoftwareEntries = result;
+            const newSoftware = Array.isArray(req.body.software)
+              ? req.body.software
+              : [req.body.software];
+            const duplicateAssets = [];
+            for (const softwareEntry of newSoftware) {
+              const existingAsset = existingSoftwareEntries.find(
+                (entry) => entry.software === softwareEntry
+              );
+              if (existingAsset) {
+                duplicateAssets.push(existingAsset.assetnum); 
+              }
+            }
+            if (duplicateAssets.length > 0) {
+              return res.json({
+                status: "errorsoftware",
+                message: `${req.body.software} already exists in another asset.`,
+                duplicateAssets: duplicateAssets,
+              });
+            }
+          const sql =
+            "UPDATE hw_asset SET `assetnum`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `dev`=?, `spec`=?, `serialnumber`=?, `software`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
+          db.query(
+            sql,
+            [
+              req.body.assetnum,
+              req.body.brand,
+              req.body.model,
+              req.body.user,
+              req.body.location,
+              req.body.dev,
+              req.body.spec,
+              req.body.serialnumber,
+              software,
+              req.body.price,
+              req.body.receivedate,
+              req.body.invoicenum,
+              req.body.ponum,
+              id,
+            ],
+            (err, result) => {
+              if (err)
+                return res.status(500).json({ Message: "Error inside server" });
+              return res.json(result);
+            }
+          );
+        });
+      }
+    });
   });
 });
+
 app.delete("/deletehw-asset/:id", (req, res) => {
   const sql = "DELETE FROM hw_asset WHERE id = ?";
   const id = req.params.id;
@@ -395,6 +432,20 @@ app.delete("/deletehw-asset/:id", (req, res) => {
   db.query(sql, [id], (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
+  });
+});
+
+app.get("/hw-software/:id", (req, res) => {
+  const id = req.params.id;
+  const sql = "SELECT software FROM `hw_asset` WHERE id = ?"; 
+  db.query(sql,[id],(err, result) => {
+    if (err) {
+      console.error('Error executing query:', err);
+      return res.json({ Message: "Error executing query" });
+    }
+    console.log('Result:', result);
+    const names = result.map(row => row.software);
+    return res.json(names); 
   });
 });
 //API FOR hw-asset
@@ -415,6 +466,7 @@ app.post("/addhw-accessories", (req, res) => {
     `serialnumber`,
     `assetinstall`,
     `location`,
+    `dev`,
     `price`,
     `receivedate`,
     `invoicenum`,
@@ -431,13 +483,14 @@ app.post("/addhw-accessories", (req, res) => {
     }
   }
   const sql =
-    "INSERT INTO hw_accessories (`type`, `detail`, `serialnumber`, `assetinstall`, `location`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO hw_accessories (`type`, `detail`, `serialnumber`, `assetinstall`, `location`,  `dev`, `price`, `receivedate`, `invoicenum`, `ponum`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   const values = [
     req.body.type,
     req.body.detail,
     req.body.serialnumber,
     req.body.assetinstall,
     req.body.location,
+    req.body.dev,
     req.body.price,
     req.body.receivedate,
     req.body.invoicenum,
@@ -466,6 +519,7 @@ app.put("/updatehw-accessories/:id", (req, res) => {
     `serialnumber`,
     `assetinstall`,
     `location`,
+    `dev`,
     `price`,
     `receivedate`,
     `invoicenum`,
@@ -482,7 +536,7 @@ app.put("/updatehw-accessories/:id", (req, res) => {
     }
   }
   const sql =
-    "UPDATE hw_accessories SET `type`=?, `detail`=?, `serialnumber`=?, `assetinstall`=?, `location`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
+    "UPDATE hw_accessories SET `type`=?, `detail`=?, `serialnumber`=?, `assetinstall`=?, `location`=?, `dev`=?, `price`=?, `receivedate`=?, `invoicenum`=?, `ponum`=? WHERE id=?";
   const id = req.params.id;
   db.query(
     sql,
@@ -492,6 +546,7 @@ app.put("/updatehw-accessories/:id", (req, res) => {
       req.body.serialnumber,
       req.body.assetinstall,
       req.body.location,
+      req.body.dev,
       req.body.price,
       req.body.receivedate,
       req.body.invoicenum,
@@ -667,6 +722,20 @@ app.delete("/deletesw-asset/:id", (req, res) => {
     return res.json(result);
   });
 });
+
+app.get("/sw", (req, res) => {
+  const sql = "SELECT `assetnum`, `name` FROM `sw_asset`"; 
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error('Error executing query:', err);
+      return res.json({ Message: "Error executing query" });
+    }
+    console.log('Result:', result);
+    const assets = result.map(row => ({ assetnum: row.assetnum, name: row.name }));
+    return res.json(assets); 
+  });
+});
+
 //API FOR sw_asset
 
 //API FOR sw_yearly
@@ -783,7 +852,6 @@ app.delete("/deletesw-yearly/:id", (req, res) => {
 //API FOR sw_yearly
 
 //API for Amortized
-
 app.get("/hw-amortized", (req, res) => {
   const sql = "SELECT * FROM hw_amortized";
   db.query(sql, (err, result) => {
