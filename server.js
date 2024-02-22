@@ -193,7 +193,7 @@ app.put("/users/:id/reset-password", async (req, res) => {
 //Hardware
 //get
 app.get("/hw-asset", (req, res) => {
-  const sql = "SELECT *,GROUP_CONCAT(softwareinstall SEPARATOR ', ') as softwareinstall FROM hw_asset JOIN gtbinstall ON hwassetnumber = assetinstall GROUP BY hwassetnumber";
+  const sql = "SELECT *, GROUP_CONCAT(softwareinstall SEPARATOR ', ') as softwareinstall FROM hw_asset LEFT JOIN gtbinstall ON hw_asset.hwassetnumber = gtbinstall.assetinstall GROUP BY hw_asset.hwassetnumber";
   db.query(sql, (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
@@ -247,7 +247,7 @@ app.post("/addhw-asset", (req, res) => {
             status: "erroramortized",
             message: "Asset Number already exists in amortized assets.",
           });
-        }
+      }
         const sql =
           "INSERT INTO hw_asset (`hwassetnumber`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `price`, `receivedate`, `invoicenumber`, `ponumber`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const values = [
@@ -274,7 +274,6 @@ app.post("/addhw-asset", (req, res) => {
               midtable,
               [req.body.hwassetnumber, sw], 
               (err, result) => {
-                console.log(result);
               }
             );
           }
@@ -323,7 +322,7 @@ app.put("/updatehw-asset/:id", (req, res) => {
     }
   }
   const sqlCheckDuplicate =
-    "SELECT COUNT(*) AS count FROM hw_asset WHERE hwassetnumber = ? AND id != ?";
+    "SELECT COUNT(*) AS count FROM hw_asset WHERE hwassetnumber = ? AND id != ?"
   const sqlCheckDuplicateAmortized =
     "SELECT COUNT(*) AS count FROM hw_amortized WHERE hwassetnumber = ?";
   const assetnum = req.body.hwassetnumber;
@@ -367,11 +366,11 @@ app.put("/updatehw-asset/:id", (req, res) => {
         ],
         (err, result) => {
           if (err)
-            return res.status(500).json({ Message: "Error inside server" });
-          const delmid = "DELETE hwassetnumber FROM gtbinstall JOIN hw_asset ON hwassetnumber = assetinstall WHERE id = ?"
+            return res.json({Message: "Error inside server"});
+          const delmid = "DELETE assetinstall FROM gtbinstall JOIN hw_asset ON hwassetnumber = assetinstall WHERE id = ?"
           db.query(delmid, [id], (err,result) => {
             if (err)
-            return res.status(500).json({ Message: "Error inside server" });
+            return res.json({Message: "Error inside server"});
           const arr = req.body.softwareinstall;
           const midtable =
             "INSERT INTO gtbinstall (`assetinstall`, `softwareinstall`) VALUES (?, ?)";
@@ -380,7 +379,6 @@ app.put("/updatehw-asset/:id", (req, res) => {
               midtable,
               [req.body.hwassetnumber, sw], 
               (err, result) => {
-                console.log(result);
               }
             );
           }
@@ -532,11 +530,19 @@ app.delete("/deletehw-accessories/:id", (req, res) => {
     return res.json(result);
   });
 });
+//gethwassetnumber
+app.get("/accessories-asset", (req, res) => {
+  const sql = "SELECT hwassetnumber FROM hw_asset";
+  db.query(sql, (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
+  });
+});
 
 //Software
 //get
 app.get("/sw-asset", (req, res) => {
-  const sql = "SELECT * FROM sw_asset JOIN gtbinstall ON swassetnumber = softwareinstall ";
+  const sql = "SELECT * FROM sw_asset LEFT JOIN gtbinstall ON swassetnumber = softwareinstall";
   db.query(sql, (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
@@ -683,7 +689,7 @@ app.delete("/deletesw-asset/:id", (req, res) => {
     return res.json(result);
   });
 });
-
+//get number+name
 app.get("/sw", (req, res) => {
   const sql = "SELECT `swassetnumber`, `name` FROM `sw_asset`";
   db.query(sql, (err, result) => {
@@ -1088,7 +1094,6 @@ app.post("/movetohw-amortized/:id", (req, res) => {
   });
 });
 
-
 app.post("/moveback-hwasset/:id", (req, res) => {
   const checkSql =
     "SELECT COUNT(*) AS count FROM hw_asset WHERE assetnum = (SELECT assetnum FROM hw_amortized WHERE id = ?)";
@@ -1114,6 +1119,16 @@ app.post("/moveback-hwasset/:id", (req, res) => {
         });
       });
     }
+  });
+});
+
+app.delete("/deletemid/:id", (req, res) => {
+  const sql = "DELETE assetinstall FROM gtbinstall JOIN hw_asset ON hwassetnumber = assetinstall WHERE id = hw_asset.id";
+  const id = req.params.id;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
   });
 });
 
