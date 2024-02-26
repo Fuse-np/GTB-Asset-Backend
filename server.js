@@ -258,11 +258,6 @@ app.post("/addhw-asset", (req, res) => {
       return res.status(400).json({ Message: `${field} is required.` });
     }
   }
-  for (const field in req.body) {
-    if (req.body.hasOwnProperty(field) && req.body[field] === null) {
-      return res.status(400).json({ Message: `${field} cannot be null.` });
-    }
-  }
   const assetnum = req.body.hwassetnumber.replace(/\W/g, "").replace("-", "");
   const sqlCheckDuplicateAsset =
     "SELECT COUNT(*) AS count FROM hw_asset WHERE REPLACE(hwassetnumber, '-', '') = ?;";
@@ -287,11 +282,9 @@ app.post("/addhw-asset", (req, res) => {
           });
         } else {
           const software = req.body.softwareinstall;
-
           if (software && software.length > 0) {
             const sqlCheckDuplicateSoftware =
               "SELECT * FROM gtbinstall WHERE softwareinstall = ?";
-
             db.query(sqlCheckDuplicateSoftware, software, (err, result) => {
               if (err) return res.status(500).json(err);
 
@@ -385,6 +378,7 @@ app.get("/readhw-asset/:id", (req, res) => {
 });
 //update
 app.put("/updatehw-asset/:id", (req, res) => {
+  const id = req.params.id
   const requiredFields = [
     "hwassetnumber",
     "brand",
@@ -403,60 +397,30 @@ app.put("/updatehw-asset/:id", (req, res) => {
     if (req.body[field] === undefined || req.body[field] === null) {
       return res.status(400).json({ Message: `${field} is required.` });
     }
-  }
-  const sqlCheckDuplicate =
-    "SELECT COUNT(*) AS count FROM hw_asset WHERE hwassetnumber = ? AND id != ?";
-  const assetnum = req.body.hwassetnumber;
-  const id = req.params.id;
-  db.query(sqlCheckDuplicate, [assetnum, id], (err, result) => {
-    if (err) return res.status(500).json(err);
-    const count = result[0].count;
-    if (count > 0) {
-      return res.json({
-        status: "error",
-        message: "Asset Number already exists.",
-      });
-    }
-    const sql =
+  } 
+    const updateSql =
       "UPDATE hw_asset SET `hwassetnumber`=?, `brand`=?, `model`=?, `user`=?, `location`=?, `dev`=?, `spec`=?, `serialnumber`=?, `price`=?, `receivedate`=?, `invoicenumber`=?, `ponumber`=? WHERE id=?";
-    db.query(
-      sql,
-      [
-        req.body.hwassetnumber,
-        req.body.brand,
-        req.body.model,
-        req.body.user,
-        req.body.location,
-        req.body.dev,
-        req.body.spec,
-        req.body.serialnumber,
-        req.body.price,
-        req.body.receivedate,
-        req.body.invoicenumber,
-        req.body.ponumber,
-        id,
-      ],
-      (err, result) => {
-        if (err)
-          return res.status(500).json({ Message: "Error inside server" });
-        const delmid =
-          "DELETE assetinstall FROM gtbinstall JOIN hw_asset ON hwassetnumber = assetinstall WHERE id = ?";
-        db.query(delmid, [id], (err, result) => {
-          if (err)
-            return res.status(500).json({ Message: "Error inside server" });
-          const arr = req.body.softwareinstall;
-          const midtable =
-            "INSERT INTO gtbinstall (`assetinstall`, `softwareinstall`) VALUES (?, ?)";
-          for (let sw of arr) {
-            db.query(midtable, [req.body.hwassetnumber, sw], (err, result) => {
-              if (err) console.error(err); 
-            });
-          }
-          return res.json(result); 
-        });
+    const values = [
+      req.body.hwassetnumber,
+      req.body.brand,
+      req.body.model,
+      req.body.user,
+      req.body.location,
+      req.body.dev,
+      req.body.spec,
+      req.body.serialnumber,
+      req.body.price,
+      req.body.receivedate,
+      req.body.invoicenumber,
+      req.body.ponumber,
+      id,
+    ];
+    db.query(updateSql, values, (err, result) => {
+      if (err) {
+        return res.status(500).json({ Message: "ERROR3" });
       }
-    );
-  });
+        return res.json(result);
+    });
 });
 
 //delete
@@ -1185,10 +1149,24 @@ app.get("/hw-softwareinstall/:id", (req, res) => {
     "SELECT GROUP_CONCAT(softwareinstall SEPARATOR ', ') as softwareinstall FROM hw_asset JOIN gtbinstall ON hwassetnumber = assetinstall WHERE id = ? GROUP BY hwassetnumber";
   db.query(sql, [id], (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
-    const softwareinstallData = result[0].softwareinstall;
+    const softwareinstallData = result[0].softwareinstall;	
     return res.send(softwareinstallData);
   });
 });
+//midtableselect
+app.get("/select-softwareinstall/:id", (req, res) => {
+  const id = req.params.id;
+  const sql =
+    "SELECT GROUP_CONCAT(softwareinstall SEPARATOR ', ') as softwareinstall FROM hw_asset JOIN gtbinstall ON hwassetnumber = assetinstall WHERE id = ? GROUP BY hwassetnumber";
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    const softwareinstallData = result[0].softwareinstall;	
+    return res.send(softwareinstallData);
+  });
+});
+
+
+
 //get assetnuber
 app.get("/hw-assetnumber", (req, res) => {
   const sql = "SELECT hwassetnumber FROM hw_asset";
