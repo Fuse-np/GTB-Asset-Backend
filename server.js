@@ -35,45 +35,22 @@ app.post("/login", jsonParser, function (req, res, next) {
         res.json({ status: "error", message: "no user found" });
         return;
       }
-      bcrypt.compare(
-        req.body.password,
-        users[0].password,
-        function (err, isLogin) {
-          if (isLogin) {
-            var tokenPayload = {
-              username: users[0].username,
-            };
-            var token = jwt.sign(tokenPayload, secret, {
-              expiresIn: "2h",
-            });
-            res.json({ status: "ok", message: "Login success", token });
-          } else {
-            res.json({ status: "error", message: "Login failed" });
-          }
-        }
-      );
+      if (req.body.password === users[0].password) {
+        var tokenPayload = {
+          username: users[0].username,
+        };
+        var token = jwt.sign(tokenPayload, secret, { 
+          expiresIn: "2h",
+        });
+        res.json({ status: "ok", message: "Login success", token });
+      } else {
+        res.json({ status: "error", message: "Login failed" });
+      }
     }
   );
 });
-//authen
-/* app.post("/authen", jsonParser, function (req, res, next) {
-  try {
-    const token = req.headers.authorization.split(" ")[1];
-    var decoded = jwt.verify(token, secret);
-    res.json({ status: "ok", decoded });
-  } catch (err) {
-    res.json({ status: "error", message: err.message });
-  }
-}); */
-//User
-app.get("/user", (req, res) => {
-  const sql = "SELECT *  FROM users";
-  db.query(sql, (err, result) => {
-    if (err) return res.json({ Message: "Error inside server" });
-    return res.json(result);
-  });
-});
-//add
+
+// AddUser 
 app.post("/adduser", jsonParser, function (req, res, next) {
   const minUsernameLength = 5;
   const maxUsernameLength = 20;
@@ -120,21 +97,24 @@ app.post("/adduser", jsonParser, function (req, res, next) {
       message: `Invalid role. Valid roles are: ${validRoles.join(", ")}`,
     });
   }
-  bcrypt.hash(password, saltRounds, function (err, hash) {
-    if (err) {
-      return res.json({ status: "error", message: err });
-    }
 
-    db.query(
-      "INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)",
-      [fullname, username, hash, role],
-      function (err, results, fields) {
-        if (err) {
-          return res.json({ status: "error", message: err });
-        }
-        return res.json({ status: "ok" });
+  db.query(
+    "INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)",
+    [fullname, username, password, role],
+    function (err, results, fields) {
+      if (err) {
+        return res.json({ status: "error", message: err });
       }
-    );
+      return res.json({ status: "ok" });
+    }
+  );
+});
+//User
+app.get("/user", (req, res) => {
+  const sql = "SELECT *  FROM users";
+  db.query(sql, (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
   });
 });
 //checkusername
@@ -225,6 +205,17 @@ app.put("/updateuser/:id", (req, res) => {
     }
   );
 });
+
+//authen
+/* app.post("/authen", jsonParser, function (req, res, next) {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    var decoded = jwt.verify(token, secret);
+    res.json({ status: "ok", decoded });
+  } catch (err) {
+    res.json({ status: "error", message: err.message });
+  }
+}); */
 
 // CRUD API
 //Hardware
