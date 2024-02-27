@@ -1133,7 +1133,7 @@ app.delete("/deletehw-amortized/:id", (req, res) => {
 //API FOR dashboard
 //Get total
 app.get("/hwtotal", (req, res) => {
-  const sql = "SELECT COUNT(id) AS hw_asset FROM hw_asset";
+  const sql = "SELECT COUNT(id) AS hw_asset FROM hw_asset WHERE amortized = False";
   db.query(sql, (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
@@ -1161,7 +1161,7 @@ app.get("/swyeartotal", (req, res) => {
   });
 });
 app.get("/amortizedtotal", (req, res) => {
-  const sql = "SELECT COUNT(id) AS hw_amortized FROM hw_amortized";
+  const sql = "SELECT COUNT(id) AS hw_amortized FROM hw_amortized WHERE amortized = True";
   db.query(sql, (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
