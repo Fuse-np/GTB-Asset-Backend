@@ -242,7 +242,7 @@ app.put("/updateuser/:id", (req, res) => {
     }
   );
 });
-//authen
+/* //authen
  app.post("/authen", jsonParser, function (req, res, next) {
   try {
     const token = req.headers.authorization.split(" ")[1];
@@ -251,7 +251,7 @@ app.put("/updateuser/:id", (req, res) => {
   } catch (err) {
     res.json({ status: "error", message: err.message });
   }
-});
+}); */
 
 // CRUD API
 //Hardware
@@ -304,10 +304,6 @@ app.post("/addhw-asset", (req, res) => {
         message: "Asset Number already exists.",
       });
     } else {
-      const software = req.body.softwareinstall;
-      if (!software || software.length === 0) {
-        req.body.softwareinstall = ["None Software"];
-      }
       const sql =
         "INSERT INTO hw_asset (`hwassetnumber`, `brand`, `model`, `user`, `location`, `dev`, `spec`, `serialnumber`, `price`, `receivedate`, `invoicenumber`, `ponumber`, `amortizeddate`, `amortized`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       const values = [
@@ -328,13 +324,11 @@ app.post("/addhw-asset", (req, res) => {
       ];
       db.query(sql, values, (err, result) => {
         if (err) return res.status(500).json(err);
-        const arr = req.body.softwareinstall.filter(
-          (software) => software !== "None Software"
-        );
-        if (arr.length > 0) {
+        const software = req.body.softwareinstall
+        if (software.length > 0) {
           const sqlCheckDuplicateSoftware =
             "SELECT * FROM gtbinstall WHERE softwareinstall IN (?)";
-          db.query(sqlCheckDuplicateSoftware, [arr], (err, result) => {
+          db.query(sqlCheckDuplicateSoftware, [software], (err, result) => {
             if (err) return res.status(500).json(err);
             if (result.length > 0) {
               const assetInstallValue = result[0].assetinstall;
@@ -346,7 +340,7 @@ app.post("/addhw-asset", (req, res) => {
             } else {
               const midtable =
                 "INSERT INTO gtbinstall (`assetinstall`, `softwareinstall`) VALUES (?, ?)";
-              for (let sw of arr) {
+              for (let sw of software) {
                 db.query(
                   midtable,
                   [req.body.hwassetnumber, sw],
@@ -449,7 +443,6 @@ app.put("/updatehw-asset/:id", (req, res) => {
                 console.error("Error checking duplicate software:", err);
                 return res.status(500).json({ Message: "Error inside server" });
               }
-
               if (result.length > 0) {
                 const assetInstallValue = result[0].assetinstall;
                 return res.json({
@@ -488,9 +481,7 @@ app.put("/updatehw-asset/:id", (req, res) => {
               }
             }
           );
-        } else {
-          return res.json(result);
-        }
+        } 
       });
     }
   });
@@ -1243,7 +1234,6 @@ app.put("/movetohw-amortized/:id", (req, res) => {
     return res.json(result);
   });
 });
-
 app.post("/movebackhw-asset/:id", (req, res) => {
   const id = req.params.id;
   const sql =
@@ -1254,7 +1244,6 @@ app.post("/movebackhw-asset/:id", (req, res) => {
     return res.json(result);
   });
 });
-
 app.delete("/deletemid/:id", (req, res) => {
   const sql = "DELETE FROM gtbinstall WHERE hwassetnumber = assetinstall";
   const id = req.params.id;
