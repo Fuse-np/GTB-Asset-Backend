@@ -242,7 +242,7 @@ app.put("/updateuser/:id", (req, res) => {
     }
   );
 });
-/* //authen
+//authen
  app.post("/authen", jsonParser, function (req, res, next) {
   try {
     const token = req.headers.authorization.split(" ")[1];
@@ -251,7 +251,7 @@ app.put("/updateuser/:id", (req, res) => {
   } catch (err) {
     res.json({ status: "error", message: err.message });
   }
-}); */
+});
 
 // CRUD API
 //Hardware
