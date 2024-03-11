@@ -313,6 +313,15 @@ app.get("/get-amortized", (req, res) => {
     return res.json(result);
   });
 });
+app.get("/get-amortizedoftware", (req, res) => {
+  const sql =
+    "SELECT * FROM software WHERE sw_amortized = true";
+  db.query(sql, (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+
+    return res.json(result);
+  });
+});
 //Add
 app.post("/add-hardware", (req, res) => {
   const requiredFields = [
@@ -632,6 +641,62 @@ app.post("/add-amortized", (req, res) => {
     }
   });
 });
+app.post("/add-amortizedoftware", (req, res) => {
+  const requiredFields = [
+    `sw_assetnumber`,
+    `sw_name`,
+    `sw_serialnumber`,
+    `sw_softwarekey`,
+    `sw_user`,
+    `sw_location`,
+    `sw_department`,
+    `sw_price`,
+    `sw_receivedate`,
+    `sw_invoicenumber`,
+    `sw_ponumber`,
+    `sw_amortizeddate`
+  ];
+  for (const field of requiredFields) {
+    if (req.body[field] === undefined || req.body[field] === null) {
+      return res.status(400).json({ Message: `${field} is required.` });
+    }
+  }
+  const assetnum = req.body.sw_assetnumber.replace(/\W/g, "");
+  const sqlCheckDuplicate =
+    "SELECT COUNT(*) AS count FROM software WHERE REPLACE(sw_assetnumber, '-', '') = ?";
+  db.query(sqlCheckDuplicate, assetnum, (err, result) => {
+    if (err) return res.status(500).json(err);
+    const count = result[0].count;
+    if (count > 0) {
+      return res.json({
+        status: "errorsoftware",
+        message: "Asset Number already exists.",
+      });
+    } else {
+      const sql =
+        "INSERT INTO software (`sw_assetnumber`, `sw_name`, `sw_serialnumber`, `sw_softwarekey`, `sw_user`, `sw_location`, `sw_department`, `sw_price`, `sw_receivedate`, `sw_invoicenumber`, `sw_ponumber`,`sw_amortizeddate`, `sw_amortized`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const values = [
+        req.body.sw_assetnumber,
+        req.body.sw_name,
+        req.body.sw_serialnumber,
+        req.body.sw_softwarekey,
+        req.body.sw_user,
+        req.body.sw_location,
+        req.body.sw_department,
+        req.body.sw_price,
+        req.body.sw_receivedate,
+        req.body.sw_invoicenumber,
+        req.body.sw_ponumber,
+        req.body.sw_amortizeddate,
+        true,
+      ];
+      db.query(sql, values, (err, result) => {
+        if (err) return res.json(err);
+        return res.json(result);
+      });
+    }
+  });
+});
 //Read
 app.get("/read-hardware/:id", (req, res) => {
   const sql =
@@ -687,6 +752,15 @@ app.get("/read-yearlysoftware/:id", (req, res) => {
 app.get("/read-amortized/:id", (req, res) => {
   const sql =
     "SELECT *, IFNULL(GROUP_CONCAT(swinstall SEPARATOR ', '), 'None Install') as softwareinstall FROM hardware LEFT JOIN pc_install_sw ON hardware.hw_assetnumber =pc_install_sw.pcinstall WHERE id = ? GROUP BY hardware.hw_assetnumber";
+  const id = req.params.id;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
+  });
+});
+app.get("/read-amortizedoftware/:id", (req, res) => {
+  const sql = "SELECT * FROM software WHERE id = ?";
   const id = req.params.id;
 
   db.query(sql, [id], (err, result) => {
@@ -1102,6 +1176,65 @@ app.put("/update-amortized/:id", (req, res) => {
     }
   });
 });
+app.put("/update-amortizedoftware/:id", (req, res) => {
+  const requiredFields = [
+    `sw_assetnumber`,
+    `sw_name`,
+    `sw_serialnumber`,
+    `sw_softwarekey`,
+    `sw_user`,
+    `sw_location`,
+    `sw_price`,
+    `sw_receivedate`,
+    `sw_invoicenumber`,
+    `sw_ponumber`,
+    `sw_amortizeddate`
+  ];
+  for (const field of requiredFields) {
+    if (req.body[field] === undefined || req.body[field] === null) {
+      return res.status(400).json({ Message: `${field} is required.` });
+    }
+  }
+  const sqlCheckDuplicate =
+    "SELECT COUNT(*) AS count FROM software WHERE REPLACE(sw_assetnumber, '-', '') = ? AND id != ?";
+  const assetnum = req.body.sw_assetnumber.replace(/\W/g, "");
+  const id = req.params.id;
+  db.query(sqlCheckDuplicate, [assetnum, id], (err, result) => {
+    if (err) return res.status(500).json({ Message: "Error inside server" });
+    const count = result[0].count;
+    if (count > 0) {
+      return res.json({
+        status: "error",
+        message: "Asset Number already exists.",
+      });
+    } else {
+      const sql =
+        "UPDATE software SET `sw_assetnumber`=?, `sw_name`=?, `sw_serialnumber`=?, `sw_softwarekey`=?, `sw_user`=?, `sw_location`=?, `sw_price`=?, `sw_receivedate`=?, `sw_invoicenumber`=?, `sw_ponumber`=?, `sw_amortizeddate`=? WHERE id=?";
+      db.query(
+        sql,
+        [
+          req.body.sw_assetnumber,
+          req.body.sw_name,
+          req.body.sw_serialnumber,
+          req.body.sw_softwarekey,
+          req.body.sw_user,
+          req.body.sw_location,
+          req.body.sw_price,
+          req.body.sw_receivedate,
+          req.body.sw_invoicenumber,
+          req.body.sw_ponumber,
+          req.body.sw_amortizeddate,
+          id,
+        ],
+        (err, result) => {
+          if (err)
+            return res.status(500).json({ Message: "Error inside server" });
+          return res.json({ Message: "Update successful.", result });
+        }
+      );
+    }
+  });
+});
 //Delete
 app.delete("/delete-hardware/:id", (req, res) => {
   const sql = "DELETE FROM hardware WHERE id = ?";
@@ -1148,6 +1281,15 @@ app.delete("/delete-amortized/:id", (req, res) => {
     return res.json(result);
   });
 });
+app.delete("/delete-amortizedoftware/:id", (req, res) => {
+  const sql = "DELETE FROM software WHERE id = ?";
+  const id = req.params.id;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
+  });
+});
 
 //Dashboard API
 //Get total count
@@ -1183,6 +1325,14 @@ app.get("/yearlysoftwaretotal", (req, res) => {
 app.get("/amortizedtotal", (req, res) => {
   const sql =
     "SELECT COUNT(id) AS hardware FROM hardware WHERE hw_amortized = True";
+  db.query(sql, (err, result) => {
+    if (err) return res.json({ Message: "Error inside server" });
+    return res.json(result);
+  });
+});
+app.get("/amortizedsoftwaretotal", (req, res) => {
+  const sql =
+    "SELECT COUNT(id) AS software FROM software WHERE sw_amortized = True";
   db.query(sql, (err, result) => {
     if (err) return res.json({ Message: "Error inside server" });
     return res.json(result);
@@ -1236,7 +1386,7 @@ app.get("/hardware-user", (req, res) => {
   });
 });
 app.get("/software-name", (req, res) => {
-  const sql = "SELECT `sw_assetnumber`, `sw_name` FROM software LEFT JOIN pc_install_sw ON sw_assetnumber = swinstall WHERE swinstall  is null";
+  const sql = "SELECT `sw_assetnumber`, `sw_name` , `sw_amortized` FROM software LEFT JOIN pc_install_sw ON sw_assetnumber = swinstall WHERE swinstall is null AND sw_amortized = false";
   db.query(sql, (err, result) => {
     if (err) {
       console.error("Error executing query:", err);
@@ -1264,6 +1414,34 @@ app.post("/amortized-hardware/:id", (req, res) => {
   const id = req.params.id;
   const sql =
     "UPDATE hardware SET `hw_amortizeddate` = null, `hw_amortized` = False WHERE id = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json(err);
+
+    return res.json(result);
+  });
+});
+app.put("/software-amortized/:id", (req, res) => {
+  const id = req.params.id;
+  const sql =
+    "UPDATE software SET `sw_amortizeddate` = DATE(CURRENT_TIMESTAMP()), `sw_amortized` = TRUE WHERE id = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.json(err);
+    const getswassetnumber = "SELECT sw_assetnumber FROM software WHERE id = ?";
+    db.query(getswassetnumber, [id], (err, result) => {
+      if (err) return res.json(err);
+      const sw = result[0].sw_assetnumber; 
+      const del = "DELETE FROM pc_install_sw WHERE swinstall = ?";
+      db.query(del, [sw], (err, result) => {
+        if (err) return res.json(err);
+        return res.json(result);
+      });
+    });
+  });
+});
+app.post("/amortized-software/:id", (req, res) => {
+  const id = req.params.id;
+  const sql =
+    "UPDATE software SET `sw_amortizeddate` = null, `sw_amortized` = False WHERE id = ?";
   db.query(sql, [id], (err, result) => {
     if (err) return res.json(err);
 
